@@ -53,7 +53,7 @@ class FetchValuesSpider(scrapy.Spider):
         self.logger.info('Saving CSV as %s...' % name)
         with open(path, 'wb') as f:
             f.write(response.body)
-            self.logger.info('Sucessful')
+            self.logger.info('Successful')
             print(path)
 
     def treating_csv_files(self):
