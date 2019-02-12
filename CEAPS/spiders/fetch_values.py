@@ -16,7 +16,7 @@ class FetchValuesSpider(scrapy.Spider):
         'CEAPS - Data', caso não exista, ela será imediatamente criada, e todo o contéudo
         baixado será salvado dentro dela.
         """
-        path = join(getcwd(), 'CEAPS - Data')
+        path = join(getcwd(), 'CEAPS - data')
         if not exists(path):
             mkdir(path)
             self.logger.info('Created a new directory %s' % path)
@@ -34,17 +34,15 @@ class FetchValuesSpider(scrapy.Spider):
                     yield from self.make_request(f)
         else:
             for f in filename:
+                f = f.replace(" ", "").split('-')[-1] + '.csv'
                 yield from self.make_request(f)
-        self.treating_csv_files()
 
     def make_request(self, f):
         """
-        Irá fazer uma requisição de acordo com a url que foi recebida,
-        transformando em uma lista com o ."split('-')" e pegando
-        o último valor com o "[-1]"
+        Faz uma requisição para baixar o arquivo .csv
 
-        Argumentos:
-            filename {[string]} -- [nome do arquivo]
+        Arguments:
+            f {[string]} -- [nome do arquivo]
         """
         url = 'http://www.senado.gov.br/transparencia/LAI/verba/{}'.format(f)
         yield scrapy.Request(url=url, callback=self.save_csv_file)
@@ -52,26 +50,54 @@ class FetchValuesSpider(scrapy.Spider):
     def save_csv_file(self, response):
         # save csv file
         name = response.url.split('/')[-1]
-        path = join(getcwd(), "CEAPS - Data\\", name)
+        path = join(getcwd(), "CEAPS - data", name)
         self.logger.info('Saving CSV as %s...' % name)
         with open(path, 'wb') as f:
             f.write(response.body)
             self.logger.info('Successful')
+            self.treating_csv_files(path)
 
-    def treating_csv_files(self):
+    def treating_csv_files(self, path):
         """
-            Todos os arquivos csv serão lidos e agrupados, respectivamente,
-            pelo nome do senador e o mês, e por fim, será calculado o gasto
-            de cada senador por mês.
+        Todos os arquivos csv serão lidos e agrupados, respectivamente,
+        pelo nome do senador e o mês, e por fim, será calculado o gasto
+        de cada senador por mês.
+
+        Arguments:
+            path {[string]} -- [caminho para a pasta com o arquivo .csv]
         """
-        path = join(getcwd(), 'CEAPS - Data\\')
+
         # show all columns and rows
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
-        for csv_file in listdir(path):
-            file_path = join(path, csv_file)
-            self.logger.info('Reading %s file...' % file_path.split("\\")[-1])
-            df = pd.read_csv(file_path, header=1, encoding="ISO-8859-1", sep=";")
-            df['VALOR_REEMBOLSADO'] = df['VALOR_REEMBOLSADO'].apply(lambda x: float(str(x).split()[0].replace(',', '.')))
-            df2 = df.groupby(['SENADOR', 'MES'])['VALOR_REEMBOLSADO'].agg('sum')
-            print(df2)
+        f = path.replace('.csv', '.txt')
+        self.logger.info('Reading %s file...' % path.split("\\")[-1])
+        df = pd.read_csv(path, header=1, encoding="ISO-8859-1", sep=";")
+        df['VALOR_REEMBOLSADO'] = df['VALOR_REEMBOLSADO'].apply(lambda x: float(str(x).split()[0].replace(',', '.')))
+        df2 = df.groupby(['SENADOR', 'MES'])['VALOR_REEMBOLSADO'].agg('sum')
+        self.create_file(df2, f)
+
+    def create_file(self, df2, f):
+        """
+        Vai verificar se existe a pasta chamada CEAPS - new data,
+        caso não exista, uma será criada com o respectivo nome.
+        Após verificar a existência da pasta, vai gerar um arquivo .txt
+        dentro desta mesma pasta.
+
+        O arquivo .txt contém:
+        -nome do senador
+        -mês em que ocorreu o reembolso
+        -valor total dos reembolsos que ocorreram no respectivo mês de cada senador.
+        
+        Arguments:
+            df2 {[DataFrame]} -- [senador e mês agrupados, e a soma total dos reembolsos do mês]
+            f {[string]} -- [nome do arquivo .txt a ser criado]
+        """
+
+        path = join(getcwd(), 'CEAPS - new data')
+        if not exists(path):
+            mkdir(path)
+        self.logger.info('Generating {} file in {}'.format(f.split("\\")[-1], path))
+        df2.reset_index().to_csv(
+            join(path, f.split("\\")[-1]), index=False, header=True,
+            decimal=',', sep=';', float_format='%.2f', encoding='utf-8')
