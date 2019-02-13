@@ -13,8 +13,8 @@ class FetchValuesSpider(scrapy.Spider):
     def parse(self, response):
         """
         Primeiramente, vai verificar se existe a pasta chamada
-        'CEAPS - Data', caso não exista, ela será imediatamente criada, e todo o contéudo
-        baixado será salvado dentro dela.
+        'CEAPS - data', caso não exista, ela será imediatamente criada, e todo
+        o contéudo baixado será salvado dentro dela.
         """
         path = join(getcwd(), 'CEAPS - data')
         if not exists(path):
@@ -49,13 +49,17 @@ class FetchValuesSpider(scrapy.Spider):
 
     def save_csv_file(self, response):
         # save csv file
-        name = response.url.split('/')[-1]
-        path = join(getcwd(), "CEAPS - data", name)
-        self.logger.info('Saving CSV as %s...' % name)
-        with open(path, 'wb') as f:
-            f.write(response.body)
-            self.logger.info('Successful')
-            self.treating_csv_files(path)
+        # check status
+        if response.status == 200:
+            name = response.url.split('/')[-1]
+            path = join(getcwd(), "CEAPS - data", name)
+            self.logger.info('Saving CSV as %s...' % name)
+            with open(path, 'wb') as f:
+                f.write(response.body)
+                self.logger.info('Successful')
+                self.treating_csv_files(path)
+        else:
+            raise scrapy.exceptions.CloseSpider('Connection failed.')
 
     def treating_csv_files(self, path):
         """
@@ -66,10 +70,10 @@ class FetchValuesSpider(scrapy.Spider):
         Arguments:
             path {[string]} -- [caminho para a pasta com o arquivo .csv]
         """
-
         # show all columns and rows
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
+
         f = path.replace('.csv', '.txt')
         self.logger.info('Reading %s file...' % path.split("\\")[-1])
         df = pd.read_csv(path, header=1, encoding="ISO-8859-1", sep=";")
@@ -87,13 +91,14 @@ class FetchValuesSpider(scrapy.Spider):
         O arquivo .txt contém:
         -nome do senador
         -mês em que ocorreu o reembolso
-        -valor total dos reembolsos que ocorreram no respectivo mês de cada senador.
+        -valor total dos reembolsos que ocorreram no respectivo mês
+        de cada senador.
         
         Arguments:
-            df2 {[DataFrame]} -- [senador e mês agrupados, e a soma total dos reembolsos do mês]
+            df2 {[DataFrame]} -- [senador e mês agrupados, e a soma total dos
+                                 reembolsos do mês]
             f {[string]} -- [nome do arquivo .txt a ser criado]
         """
-
         path = join(getcwd(), 'CEAPS - new data')
         if not exists(path):
             mkdir(path)
