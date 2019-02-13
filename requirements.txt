@@ -9,6 +9,8 @@ hyperlink==18.0.0
 idna==2.8
 incremental==17.5.0
 lxml==4.3.0
+numpy==1.16.1
+pandas==0.24.1
 parsel==1.5.1
 pyasn1==0.4.5
 pyasn1-modules==0.2.4
@@ -16,6 +18,8 @@ pycparser==2.19
 PyDispatcher==2.0.5
 PyHamcrest==1.9.0
 pyOpenSSL==19.0.0
+python-dateutil==2.8.0
+pytz==2018.9
 pywin32==224
 queuelib==1.5.0
 Scrapy==1.6.0
