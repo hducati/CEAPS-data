@@ -1,4 +1,10 @@
-# -*- coding: utf-8 -*-
+""""
+Spider to get csv files from www12.senado.leg.br and
+manipulate to a txt file with some solid information.
+
+Check Scrapy documentation: https://docs.scrapy.org/en/latest/
+"""
+
 import scrapy
 import pandas as pd
 from os import listdir, mkdir, getcwd
@@ -16,7 +22,9 @@ class FetchValuesSpider(scrapy.Spider):
         'CEAPS - data', caso não exista, ela será imediatamente criada, e todo
         o contéudo baixado será salvado dentro dela.
         """
-        path = join(getcwd(), 'CEAPS - data')
+
+        path = join(getcwd(), 'ceaps - csv files')
+
         if not exists(path):
             mkdir(path)
             self.logger.info('Created a new directory %s' % path)
@@ -24,7 +32,9 @@ class FetchValuesSpider(scrapy.Spider):
             self.logger.info('Directory already exists %s' % path)
         filename = response.css("#parent-fieldname-text p a::text").extract()
         filename.reverse()
-        csv_files = [csv for csv in listdir(path) if ('.csv' in csv[-4:]) and (isfile(join(path, csv)))]
+        csv_files = [csv for csv in listdir(path) if ('.csv' in csv[-4:]) and (
+            isfile(join(path, csv)))]
+
         if csv_files:
             for f in filename:
                 f = f.replace(" ", "").split('-')[-1] + '.csv'
@@ -44,6 +54,7 @@ class FetchValuesSpider(scrapy.Spider):
         Arguments:
             f {[string]} -- [nome do arquivo]
         """
+
         url = 'http://www.senado.gov.br/transparencia/LAI/verba/{}'.format(f)
         yield scrapy.Request(url=url, callback=self.save_csv_file)
 
@@ -52,7 +63,7 @@ class FetchValuesSpider(scrapy.Spider):
         # check status
         if response.status == 200:
             name = response.url.split('/')[-1]
-            path = join(getcwd(), "CEAPS - data", name)
+            path = join(getcwd(), "ceaps - csv files", name)
             self.logger.info('Saving CSV as %s...' % name)
             with open(path, 'wb') as f:
                 f.write(response.body)
@@ -76,8 +87,13 @@ class FetchValuesSpider(scrapy.Spider):
 
         f = path.replace('.csv', '.txt')
         self.logger.info('Reading %s file...' % path.split("\\")[-1])
+
+        # reading csv file
         df = pd.read_csv(path, header=1, encoding="ISO-8859-1", sep=";")
-        df['VALOR_REEMBOLSADO'] = df['VALOR_REEMBOLSADO'].apply(lambda x: float(str(x).split()[0].replace(',', '.')))
+        df['VALOR_REEMBOLSADO'] = df['VALOR_REEMBOLSADO'].apply(
+            lambda x: float(str(x).split()[0].replace(',', '.')))
+
+        # new dataframe
         df2 = df.groupby(['SENADOR', 'MES'])['VALOR_REEMBOLSADO'].agg('sum')
         self.create_file(df2, f)
 
@@ -93,16 +109,20 @@ class FetchValuesSpider(scrapy.Spider):
         -mês em que ocorreu o reembolso
         -valor total dos reembolsos que ocorreram no respectivo mês
         de cada senador.
-        
+
         Arguments:
             df2 {[DataFrame]} -- [senador e mês agrupados, e a soma total dos
                                  reembolsos do mês]
             f {[string]} -- [nome do arquivo .txt a ser criado]
         """
-        path = join(getcwd(), 'CEAPS - new data')
+
+        path = join(getcwd(), 'ceaps - txt files')
         if not exists(path):
             mkdir(path)
-        self.logger.info('Generating {} file in {}'.format(f.split("\\")[-1], path))
+
+        self.logger.info('Generating {} file in {}'.format(
+            f.split("\\")[-1], path))
+
         df2.reset_index().to_csv(
             join(path, f.split("\\")[-1]), index=False, header=True,
             decimal=',', sep=';', float_format='%.2f', encoding='utf-8')
