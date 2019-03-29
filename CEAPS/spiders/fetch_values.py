@@ -12,7 +12,7 @@ from os.path import join, isfile, exists
 
 
 class FetchValuesSpider(scrapy.Spider):
-    name = 'fetch_values'
+    name = 'ceaps_data'
     # allowed_domains = ['www12.senado.leg.br']
     start_urls = ['https://www12.senado.leg.br/transparencia/dados-abertos-transparencia/dados-abertos-ceaps']
 
@@ -93,7 +93,7 @@ class FetchValuesSpider(scrapy.Spider):
         df['VALOR_REEMBOLSADO'] = df['VALOR_REEMBOLSADO'].apply(
             lambda x: float(str(x).split()[0].replace(',', '.')))
 
-        # new dataframe
+        # new series
         df2 = df.groupby(['SENADOR', 'MES'])['VALOR_REEMBOLSADO'].agg('sum')
         self.create_file(df2, f)
 
@@ -111,7 +111,7 @@ class FetchValuesSpider(scrapy.Spider):
         de cada senador.
 
         Arguments:
-            df2 {[DataFrame]} -- [senador e mês agrupados, e a soma total dos
+            df2 {[Series]} -- [senador e mês agrupados, e a soma total dos
                                  reembolsos do mês]
             f {[string]} -- [nome do arquivo .txt a ser criado]
         """
